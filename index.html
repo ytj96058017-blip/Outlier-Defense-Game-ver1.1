@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이상치 폭탄 디펜스 - 중3 수학 대푯값 게임</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+KR:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                        arcade: ['Orbitron', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #0b0f19; color: #f1f5f9; user-select: none; }
+        canvas { touch-action: none; background: radial-gradient(circle at center, #111827 0%, #030712 100%); }
+        .font-arcade { font-family: 'Orbitron', sans-serif; }
+        .glow-box-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+        .glow-box-shield { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.1); }
+        }
+        .pop-text { animation: floatUp 1.2s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <header class="bg-slate-950/90 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-3 py-1 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center text-slate-950 text-sm font-black shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-shield-cat"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm md:text-base font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-400 font-arcade">
+                        OUTLIER DEFENSE
+                    </h1>
+                    <p class="text-[10px] text-slate-400 hidden sm:block">중3 통계: 대푯값(평균 · 중앙값 · 최빈값) 디펜스</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-1.5 text-xs">
+                <button id="btnToggleTVBoard" onclick="window.toggleTVBoardMode()" class="px-2.5 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg font-bold flex items-center space-x-1 transition text-[11px] shadow-lg shadow-indigo-500/30 animate-bounce cursor-pointer">
+                    <i class="fa-solid fa-tv text-amber-300"></i>
+                    <span>📺 교사용 전광판</span>
+                </button>
+                <button id="btnToggleLeaderboard" onclick="window.toggleLeaderboardModal()" class="px-2 py-1 bg-amber-950/80 text-amber-300 border border-amber-600/60 hover:bg-amber-900 rounded-lg font-semibold flex items-center space-x-1 transition text-[11px] cursor-pointer">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <span>순위표</span>
+                </button>
+                <button id="soundToggleBtn" onclick="window.toggleAudio()" class="px-2 py-1 bg-slate-900 border border-slate-700 hover:border-cyan-500/50 rounded-lg flex items-center space-x-1 transition text-[11px] cursor-pointer">
+                    <i class="fa-solid fa-volume-high text-cyan-400" id="soundIcon"></i>
+                    <span id="soundLabel" class="text-slate-300">ON</span>
+                </button>
+                <button id="btnToggleConcept" onclick="window.toggleConceptModal()" class="px-2 py-1 bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 hover:bg-indigo-900 rounded-lg font-semibold flex items-center space-x-1 transition ring-2 ring-indigo-500/30 text-[11px] cursor-pointer">
+                    <i class="fa-solid fa-book-open text-amber-400"></i>
+                    <span>개념노트</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="actionAlertBanner" style="display: none;" class="bg-rose-600/90 text-white font-bold text-center py-1 px-3 text-xs animate-pulse flex justify-center items-center gap-2 border-b border-rose-400 shadow-lg z-40">
+        <i class="fa-solid fa-triangle-exclamation text-amber-300 text-sm"></i>
+        <span id="actionAlertText">이상치 폭탄 감지! [2] 키를 눌러 중앙값 방어막을 작동시키세요!</span>
+    </div>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-1.5 grid grid-cols-1 lg:grid-cols-12 gap-2">
+
+        <!-- LEFT/CENTER: Game Arena -->
+        <section class="lg:col-span-8 flex flex-col space-y-1.5">
+            <div class="relative bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl flex flex-col">
+                <div id="conceptPopLayer" class="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center space-y-2"></div>
+
+                <!-- HUD Status Overlay -->
+                <div class="absolute top-2 left-2 right-2 z-20 pointer-events-none flex flex-col space-y-1">
+                    <div class="flex justify-between items-center bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-700/80 shadow-md">
+                        <div class="flex items-center space-x-2">
+                            <span id="shieldModeBadge" class="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-bold rounded-md flex items-center gap-1">
+                                <i class="fa-solid fa-chart-line text-cyan-400"></i>
+                                <span id="gaugeModeText">측정: 평균(Mean)</span>
+                            </span>
+                            <span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[10px] font-arcade font-bold rounded-md">
+                                WAVE <span id="waveNum">1</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-3 text-[11px] font-arcade">
+                            <div><span class="text-slate-400">SCORE:</span> <span id="scoreText" class="text-amber-400 font-bold">0</span></div>
+                            <div><span class="text-slate-400">HP:</span> <span id="hpText" class="text-rose-400 font-bold">100</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950/85 backdrop-blur-md px-2 py-1 rounded-lg border border-slate-800 shadow-lg">
+                        <div class="flex justify-between text-[10px] font-semibold text-slate-300 mb-0.5">
+                            <span class="text-emerald-400">목표 에너지: 50 유지</span>
+                            <span id="currentGaugeVal" class="font-arcade text-cyan-300 font-bold">측정 수치: 50.0</span>
+                        </div>
+                        <div class="relative w-full h-2.5 bg-slate-900 rounded-full border border-slate-700 overflow-hidden">
+                            <div class="absolute left-1/2 top-0 bottom-0 w-1 bg-emerald-400 z-20 shadow-[0_0_6px_#10b981]"></div>
+                            <div id="energyGaugeFill" class="h-full rounded-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500 transition-all duration-300" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <canvas id="gameCanvas" width="800" height="520" class="w-full h-[520px] sm:h-[540px] cursor-crosshair block"></canvas>
+
+                <!-- Start Screen Overlay -->
+                <div id="startOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md z-40 flex flex-col items-center justify-center p-4 text-center space-y-3">
+                    <div class="w-12 h-12 bg-gradient-to-tr from-cyan-500 to-emerald-400 rounded-2xl flex items-center justify-center text-slate-950 text-xl font-black shadow-xl shadow-cyan-500/30 animate-bounce">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-200 to-emerald-400 font-arcade">
+                            OUTLIER DEFENSE
+                        </h2>
+                        <p class="text-xs text-slate-300 mt-1 max-w-md leading-relaxed">
+                            도시 에너지(평균)를 50으로 유지하세요!<br>
+                            이름을 입력하면 학급 실시간 순위표에 등록됩니다.
+                        </p>
+                    </div>
+
+                    <div class="w-full max-w-xs space-y-1">
+                        <label class="text-[11px] font-bold text-cyan-300 block text-left">👤 도전자 이름 / 학번 (예: 3학년1반 김수학)</label>
+                        <input type="text" id="playerNameInput" placeholder="이름을 입력하세요" class="w-full px-3 py-2 bg-slate-900 border border-cyan-500/50 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 text-center font-bold">
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button id="btnOverlayConcept" onclick="window.toggleConceptModal()" class="px-4 py-2 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 border border-indigo-600 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-book-open text-amber-400"></i>
+                            <span>개념노트 먼저 읽기</span>
+                        </button>
+
+                        <button id="btnStartGame" onclick="window.startGame()" class="px-6 py-2 bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-play text-sm"></i>
+                            <span>게 임 시 작</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-3 text-[10px] text-slate-400 font-mono pt-1">
+                        <span><kbd class="px-1 py-0.5 bg-slate-800 rounded border border-slate-700 text-cyan-300">[1] / 클릭</kbd> 요격빔</span>
+                        <span><kbd class="px-1 py-0.5 bg-slate-800 rounded border border-slate-700 text-emerald-300">[2]</kbd> 중앙값 방어</span>
+                        <span><kbd class="px-1 py-0.5 bg-slate-800 rounded border border-slate-700 text-amber-300">[3]</kbd> 최빈값 정화</span>
+                    </div>
+                </div>
+
+                <!-- Game Over Overlay -->
+                <div id="gameOverOverlay" style="display: none;" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-40 flex flex-col items-center justify-center p-4 text-center space-y-2.5 overflow-y-auto">
+                    <div class="w-10 h-10 bg-rose-500/20 text-rose-500 border border-rose-500/40 rounded-2xl flex items-center justify-center text-xl font-black shadow-xl">
+                        <i class="fa-solid fa-skull-crossbones"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-black text-rose-400 font-arcade">GAME OVER</h2>
+                        <p id="gameOverReasonText" class="text-xs text-slate-300 mt-0.5 max-w-md">도시 에너지가 통제 불능 상태가 되었습니다!</p>
+                    </div>
+
+                    <div class="w-full max-w-sm bg-slate-900/90 border border-slate-800 rounded-xl p-2 space-y-1">
+                        <span class="text-[10px] font-bold text-amber-400 block"><i class="fa-solid fa-award"></i> 이번 판 획득 업적 뱃지</span>
+                        <div id="earnedBadgesList" class="flex flex-wrap justify-center gap-1 text-[10px]"></div>
+                    </div>
+
+                    <div id="quizContainerBox" class="w-full max-w-sm bg-indigo-950/90 border border-indigo-500/50 rounded-xl p-3 text-left space-y-2 shadow-xl">
+                        <div class="flex justify-between items-center border-b border-indigo-800 pb-1">
+                            <span class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                                <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+                                📝 형성평가 개념 퀴즈 (+500점 보너스!)
+                            </span>
+                            <span id="quizBadgeStatus" class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold">미풀이</span>
+                        </div>
+                        <p id="quizQuestionText" class="text-xs font-bold text-white leading-tight">문제 로딩 중...</p>
+                        <div id="quizOptionsList" class="space-y-1 text-xs"></div>
+                        <div id="quizExplanationBox" style="display: none;" class="text-[10px] p-2 bg-slate-950 rounded-lg border border-indigo-700/60 leading-relaxed"></div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-2 w-64 text-center space-y-0.5">
+                        <span id="finalPlayerNameText" class="text-xs font-bold text-cyan-300 block">3학년1반 김수학</span>
+                        <span class="text-[10px] text-slate-400 block font-mono">최종 점수 (보너스 포함)</span>
+                        <span id="finalScoreText" class="text-2xl font-black font-arcade text-amber-400">0</span>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button id="btnGameOverLeaderboard" onclick="window.toggleLeaderboardModal()" class="px-3.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-600 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-trophy text-amber-400"></i>
+                            <span>실시간 순위 확인</span>
+                        </button>
+                        <button id="btnRestartGame" onclick="window.startGame()" class="px-5 py-1.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-500/30 hover:scale-105 active:scale-95 transition flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-rotate-right"></i>
+                            <span>다시 도전하기</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="shieldVisualOverlay" style="display: none;" class="pointer-events-none absolute inset-0 border-4 border-emerald-500/60 rounded-2xl shadow-[inset_0_0_40px_rgba(16,185,129,0.3)]"></div>
+            </div>
+
+            <!-- Bottom Data Tray -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-1.5 space-y-1 shadow-xl">
+                <div class="flex justify-between items-center text-[10px] px-1">
+                    <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+                        도시 실시간 핵심 대푯값 수치
+                    </span>
+                    <span class="text-[10px] text-slate-400">수집 데이터: <strong id="trayDataCount" class="text-cyan-300 font-arcade">0</strong>개</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-1.5">
+                    <div class="bg-slate-950 p-1.5 rounded-lg border border-emerald-500/40 flex flex-col justify-between">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-emerald-400">
+                            <span>🎯 중앙값 (Median)</span>
+                            <span class="text-[9px] text-emerald-300/80 font-mono">정가운데 수치</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-0.5">
+                            <span id="trayMedianVal" class="text-base font-black font-arcade text-emerald-300">50.0</span>
+                            <span class="text-[9px] text-emerald-400/80">🛡️ 이상치 영향 0%</span>
+                        </div>
+                    </div>
+
+                    <div id="trayModeCardBox" class="bg-slate-950 p-1.5 rounded-lg border border-amber-500/40 flex flex-col justify-between transition">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-amber-400">
+                            <span>🧹 최빈값 (Mode)</span>
+                            <span id="trayModeCount" class="text-[9px] text-amber-300/80 font-mono">0회 중복</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-0.5">
+                            <span id="trayModeVal" class="text-sm font-black font-arcade text-amber-300">없음</span>
+                            <span class="text-[9px] text-amber-400/80">✨ 최다 중복 데이터</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skill Action Dock -->
+            <div class="grid grid-cols-3 gap-1.5">
+                <button id="btnSkillLaser" onclick="window.useLaserSkill()" class="group relative bg-slate-900 border border-cyan-500/30 hover:border-cyan-400 p-1.5 rounded-lg flex flex-col items-center justify-center transition disabled:opacity-60 overflow-hidden cursor-pointer">
+                    <div id="laserGaugeBar" class="absolute bottom-0 left-0 top-0 bg-cyan-500/25 transition-all duration-100" style="width: 100%;"></div>
+                    <div class="relative z-10 flex items-center space-x-1 text-cyan-400 font-bold text-xs">
+                        <span class="px-1 py-0.5 bg-cyan-950 border border-cyan-500/50 text-cyan-300 text-[9px] rounded font-mono">1</span>
+                        <i class="fa-solid fa-crosshairs text-xs text-rose-400"></i>
+                        <span>요격 빔 <span class="text-[9px] text-cyan-300 font-mono">(쿨3s)</span></span>
+                    </div>
+                    <span id="laserCooldownText" class="relative z-10 text-[9px] font-arcade text-cyan-300 font-bold mt-0.5">READY [1]</span>
+                </button>
+
+                <button id="btnSkillShield" onclick="window.useMedianShieldSkill()" class="group relative bg-slate-900 border border-emerald-500/30 hover:border-emerald-400 p-1.5 rounded-lg flex flex-col items-center justify-center transition disabled:opacity-60 overflow-hidden cursor-pointer">
+                    <div id="shieldGaugeBar" class="absolute bottom-0 left-0 top-0 bg-emerald-500/25 transition-all duration-100" style="width: 100%;"></div>
+                    <div class="relative z-10 flex items-center space-x-1 text-emerald-400 font-bold text-xs">
+                        <span class="px-1 py-0.5 bg-emerald-950 border border-emerald-500/50 text-emerald-300 text-[9px] rounded font-mono">2</span>
+                        <i class="fa-solid fa-shield-halved text-xs"></i>
+                        <span>중앙값 방어 <span class="text-[9px] text-emerald-300 font-mono">(쿨12s)</span></span>
+                    </div>
+                    <span id="shieldCooldownText" class="relative z-10 text-[9px] font-arcade text-emerald-300 font-bold mt-0.5">READY [2]</span>
+                </button>
+
+                <button id="btnSkillMode" onclick="window.useModePurgeSkill()" class="group relative bg-slate-900 border border-amber-500/30 hover:border-amber-400 p-1.5 rounded-lg flex flex-col items-center justify-center transition disabled:opacity-60 overflow-hidden cursor-pointer">
+                    <div id="modeGaugeBar" class="absolute bottom-0 left-0 top-0 bg-amber-500/25 transition-all duration-100" style="width: 100%;"></div>
+                    <div class="relative z-10 flex items-center space-x-1 text-amber-400 font-bold text-xs">
+                        <span class="px-1 py-0.5 bg-amber-950 border border-amber-500/50 text-amber-300 text-[9px] rounded font-mono">3</span>
+                        <i class="fa-solid fa-broom text-xs"></i>
+                        <span>최빈값 정화 <span class="text-[9px] text-amber-300 font-mono">(쿨8s)</span></span>
+                    </div>
+                    <span id="modeCooldownText" class="relative z-10 text-[9px] font-arcade text-amber-300 font-bold mt-0.5">READY [3]</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- RIGHT: Statistics Sidebar -->
+        <section class="lg:col-span-4 flex flex-col space-y-2">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2 space-y-1.5 shadow-xl">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+                    <h3 class="text-[11px] font-extrabold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-calculator"></i>
+                        실시간 대푯값 수치 비교
+                    </h3>
+                    <span class="text-[9px] text-slate-500 font-arcade">COUNT: <strong id="dataCountText" class="text-slate-300">0</strong></span>
+                </div>
+
+                <div id="cardMeanStat" class="p-2 bg-slate-950 rounded-lg border border-slate-800 transition">
+                    <div class="flex justify-between items-center text-[10px]">
+                        <span class="text-slate-400 font-semibold">평균 (Mean)</span>
+                        <span id="meanFormulaText" class="text-[9px] text-slate-500 font-mono">합/개수</span>
+                    </div>
+                    <div class="flex justify-between items-baseline mt-0.5">
+                        <span id="valMeanDisplay" class="text-base font-black font-arcade text-cyan-400">50.0</span>
+                        <span class="text-[9px] text-rose-400/80">⚠️ 이상치에 매우 민감</span>
+                    </div>
+                </div>
+
+                <div id="cardMedianStat" class="p-2 bg-slate-950 rounded-lg border border-emerald-500/40 bg-emerald-950/20 transition">
+                    <div class="flex justify-between items-center text-[10px]">
+                        <span class="text-emerald-300 font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-down-short-wide"></i>
+                            중앙값 (Median)
+                        </span>
+                        <span id="medianPosText" class="text-[9px] text-emerald-400 font-mono">정가운데</span>
+                    </div>
+                    <div class="flex justify-between items-baseline mt-0.5">
+                        <span id="valMedianDisplay" class="text-base font-black font-arcade text-emerald-400">50.0</span>
+                        <span class="text-[9px] text-emerald-300/80">🛡️ 이상치 완벽 방어</span>
+                    </div>
+                </div>
+
+                <div id="cardModeStat" class="p-2 bg-slate-950 rounded-lg border border-slate-800 transition">
+                    <div class="flex justify-between items-center text-[10px]">
+                        <span class="text-slate-400 font-semibold">최빈값 (Mode)</span>
+                        <span id="modeCountText" class="text-[9px] text-slate-500 font-mono">0회</span>
+                    </div>
+                    <div class="flex justify-between items-baseline mt-0.5">
+                        <span id="valModeDisplay" class="text-sm font-black font-arcade text-amber-400">없음</span>
+                        <span class="text-[9px] text-amber-400/80">🧹 최다 출현 데이터</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-br from-indigo-950/80 to-slate-900 p-2 rounded-xl border border-indigo-700/60 text-xs text-indigo-200 space-y-1 shadow-xl">
+                <div class="font-bold text-cyan-300 flex items-center justify-between text-[10px]">
+                    <span class="flex items-center gap-1">
+                        <i class="fa-solid fa-lightbulb text-amber-400 animate-bounce"></i>
+                        <span>실시간 수학 원리 라이브 해설</span>
+                    </span>
+                    <span class="text-[8px] bg-indigo-900 text-indigo-300 px-1 py-0.5 rounded font-mono">LIVE</span>
+                </div>
+                <p id="teacherDynamicTip" class="leading-relaxed text-[10px] text-slate-200 bg-slate-950/60 p-2 rounded-lg border border-indigo-800/50">
+                    게임이 시작되면 바닥에 착지하는 데이터들을 통해 <strong>평균 · 중앙값 · 최빈값의 수치 변화</strong>를 실시간으로 비교해 보세요!
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- TV LEADERBOARD MODAL -->
+    <div id="tvBoardOverlay" style="display: none;" class="fixed inset-0 bg-slate-950 z-[100] flex flex-col p-4 sm:p-6 overflow-hidden">
+        <div class="max-w-5xl w-full mx-auto flex justify-between items-center border-b border-indigo-500/40 pb-3 mb-2">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-tr from-amber-400 to-indigo-500 rounded-xl flex items-center justify-center text-slate-950 text-xl font-black shadow-lg">
+                    <i class="fa-solid fa-tv"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-cyan-300 to-indigo-300 font-arcade tracking-wider">
+                        CLASSROOM REALTIME LEADERBOARD
+                    </h2>
+                    <p class="text-xs text-indigo-200">중3 통계 대푯값 디펜스 - 학급 실시간 랭킹 (3초 자동 갱신)</p>
+                </div>
+            </div>
+
+            <div class="hidden sm:flex items-center bg-slate-900 border border-cyan-500/40 p-1.5 rounded-xl gap-2 shadow-lg">
+                <img id="tvQrCodeImg" src="" alt="QR Code" class="w-14 h-14 rounded-lg border border-cyan-400 bg-white p-0.5">
+                <div class="text-left text-[10px]">
+                    <span class="font-bold text-cyan-300 block">📱 카메라로 스캔!</span>
+                    <span class="text-slate-400 block leading-tight">학생 기기로 바로<br>게임 접속하기</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button id="btnToggleFullscreen" onclick="window.toggleFullscreen()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-600 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-expand"></i>
+                    <span>전체화면</span>
+                </button>
+                <button id="btnCloseTVBoard" onclick="window.toggleTVBoardMode()" class="px-3 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-600 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>전광판 닫기</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="max-w-5xl w-full mx-auto bg-slate-900/90 border border-indigo-500/40 p-2.5 rounded-2xl mb-3 shadow-xl">
+            <div class="flex justify-between items-center text-xs font-bold mb-1">
+                <span class="text-cyan-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-handshake-angle text-amber-400 text-sm"></i>
+                    🏫 우리 학급 합동 목표 (50,000점 달성 미션)
+                </span>
+                <span id="classCoOpPctText" class="font-arcade text-amber-400 font-extrabold text-sm">0 / 50,000점 (0%)</span>
+            </div>
+            <div class="w-full h-3 bg-slate-950 rounded-full border border-slate-800 overflow-hidden relative">
+                <div id="classCoOpFillBar" class="h-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-amber-400 transition-all duration-500" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <div class="flex-grow overflow-y-auto custom-scrollbar flex flex-col items-center">
+            <div id="tvLeaderboardContent" class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-3 p-1"></div>
+        </div>
+    </div>
+
+    <!-- Student Leaderboard Modal -->
+    <div id="leaderboardModal" style="display: none;" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[90] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-5 space-y-4 shadow-2xl relative">
+            <button id="btnCloseLeaderboard" onclick="window.toggleLeaderboardModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
+                <div class="w-10 h-10 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-base text-white">🏆 학급 실시간 순위표</h3>
+                    <p class="text-xs text-slate-400">우리 반 친구들과 점수를 경쟁하며 수학 왕이 되어보세요!</p>
+                </div>
+            </div>
+            <div id="leaderboardList" class="space-y-1.5 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1"></div>
+            <button id="btnCloseLeaderboardBottom" onclick="window.toggleLeaderboardModal()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs transition cursor-pointer">닫기</button>
+        </div>
+    </div>
+
+    <!-- Concept Note Modal -->
+    <div id="conceptModal" style="display: none;" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[90] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-xl w-full p-5 space-y-3 shadow-2xl relative">
+            <button id="btnCloseConcept" onclick="window.toggleConceptModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex items-center space-x-3 border-b border-slate-800 pb-2">
+                <div class="w-9 h-9 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded-xl flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-base text-white">중3 수학 통계: 대푯값 개념 미리보기</h3>
+                    <p class="text-xs text-slate-400">게임을 하기 전 핵심 개념과 스킬 원리를 학습하세요!</p>
+                </div>
+            </div>
+
+            <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
+                <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <h4 class="font-bold text-cyan-400 text-xs">1. 대푯값(Representative Value)이란?</h4>
+                    <p>자료 전체의 특징을 대표적으로 나타내는 값입니다. 중학교 3학년 과정에서는 <strong>평균</strong>, <strong>중앙값</strong>, <strong>최빈값</strong> 세 가지를 배웁니다.</p>
+                </div>
+                <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <h4 class="font-bold text-rose-400 text-xs">2. 이상치(Outlier)의 영향과 평균 (Mean)</h4>
+                    <p>자료의 다른 값들에 비해 <strong>지나치게 크거나 작은 값</strong>을 이상치라고 합니다.</p>
+                    <p class="text-rose-300 mt-0.5">⚠️ <strong>평균의 약점:</strong> 모든 자료의 합을 총 개수로 나누므로, 이상치가 딱 하나만 들어와도 평균 전체가 크게 왜곡됩니다.</p>
+                </div>
+                <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <h4 class="font-bold text-emerald-400 text-xs">3. 중앙값 (Median): 왜 이상치에 강할까? (스킬 [2]의 원리)</h4>
+                    <p>자료를 크기순으로 정렬했을 때 <strong>정가운데 위치한 값</strong>입니다. 거대한 이상치(+999)가 붙어도 <strong>가운데 위치한 값 자체는 바뀌지 않으므로</strong> 방어막을 켜면 안전합니다.</p>
+                </div>
+                <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <h4 class="font-bold text-amber-400 text-xs">4. 최빈값 (Mode): 가장 많이 등장하는 값 (스킬 [3]의 원리)</h4>
+                    <p>자료 중에서 <strong>가장 출현 빈도가 높은(자주 나타나는) 값</strong>입니다. 동일한 데이터가 여러 개 쌓여 평균을 야금야금 올릴 때, <strong>최빈값 정화 빔</strong>을 쓰면 중복 데이터를 한 번에 대량 소멸시킬 수 있습니다.</p>
+                </div>
+            </div>
+
+            <button id="btnCloseConceptBottom" onclick="window.toggleConceptModal()" class="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-black rounded-xl text-xs transition shadow-lg cursor-pointer">
+                개념 이해 완료! 게임 시작하기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Updated Google Apps Script Web App URL with Cache-Buster support
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxnlodbv9M9tjzzsAw1YCjsaJCfKUF8QI4rK0pHa7pnIly6i8B4D0qDYr9yyoU5f3DW8Q/exec";
+
+        // Universal Safe Modal Control Functions
+        window.showModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.setProperty('display', 'flex', 'important');
+            }
+        };
+
+        window.hideModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.setProperty('display', 'none', 'important');
+            }
+        };
+
+        // Safe Storage Helper
+        window._inMemoryStorage = {};
+        function safeGetStorage(key) {
+            try { return localStorage.getItem(key); }
+            catch(e) { return window._inMemoryStorage[key] || null; }
+        }
+        function safeSetStorage(key, val) {
+            try { localStorage.setItem(key, val); }
+            catch(e) { window._inMemoryStorage[key] = val; }
+        }
+
+        // Global Game States
+        window.gameState = 'START';
+        window.score = 0;
+        window.cityHp = 100;
+        window.wave = 1;
+        window.waveTimer = 0;
+        window.lastTime = 0;
+        window.cityDataset = [50, 48, 52, 50, 50];
+        window.fallingBlocks = [];
+        window.particles = [];
+        window.lasers = [];
+        window.isMedianShieldActive = false;
+        window.shieldDurationTimer = 0;
+        window.cooldowns = { laser: 0, shield: 0, mode: 0 };
+        window.COOLDOWN_MAX = { laser: 3.0, shield: 12.0, mode: 8.0 };
+        window.canvas = null;
+        window.ctx = null;
+        window.mousePos = { x: 0, y: 0 };
+        window.isAudioOn = true;
+        window.audioCtx = null;
+        window.playerName = '';
+        window.isTVModeActive = false;
+        window.tvPollingInterval = null;
+
+        window.statsTracker = { shieldCount: 0, modePurgeCount: 0, laserInterceptions: 0 };
+
+        const quizPool = [
+            {
+                q: "거대한 이상치(+999)가 착지했을 때 '평균' 대신 '중앙값' 방어막이 안전한 이유는?",
+                options: [
+                    "① 중앙값 수치가 항상 0으로 고정되기 때문",
+                    "② 정렬 시 정가운데 위치만 따지므로 이상치의 영향을 받지 않아서",
+                    "③ 중앙값은 자료의 모든 값을 다 더해서 나누기 때문"
+                ],
+                ans: 1,
+                exp: "정답은 ②번! 중앙값은 자료를 크기순으로 정렬했을 때 정가운데 위치한 값만 따지므로 +999 같은 이상치가 들어와도 변화가 적습니다."
+            },
+            {
+                q: "동일한 숫자 블록 [85]가 여러 개 누적되었을 때, 이 최다 중복 수치를 뜻하는 용어는?",
+                options: [
+                    "① 평균 (Mean)",
+                    "② 최빈값 (Mode)",
+                    "③ 분산 (Variance)"
+                ],
+                ans: 1,
+                exp: "정답은 ②번! 자료 중에서 가장 자주 나타나는(출현 빈도가 높은) 값을 '최빈값'이라고 합니다."
+            },
+            {
+                q: "자료의 수치 중 하나가 100배로 커져도 거의 영향을 받지 않는 대푯값은?",
+                options: [
+                    "① 평균",
+                    "② 중앙값",
+                    "③ 전체의 합"
+                ],
+                ans: 1,
+                exp: "정답은 ②번! 평균은 모든 자료의 합을 이용하므로 크게 변하지만, 중앙값은 크기순 위치만 따지므로 안전합니다."
+            }
+        ];
+        window.currentQuiz = null;
+        window.isQuizAnswered = false;
+
+        window.globalLeaderboard = [];
+        window.classTotalScore = 0;
+
+        window.toggleConceptModal = function() {
+            const modal = document.getElementById('conceptModal');
+            if (!modal) return;
+            if (modal.style.display === 'none' || getComputedStyle(modal).display === 'none') {
+                window.showModal('conceptModal');
+            } else {
+                window.hideModal('conceptModal');
+            }
+        };
+
+        window.toggleLeaderboardModal = function() {
+            const modal = document.getElementById('leaderboardModal');
+            if (!modal) return;
+            if (modal.style.display === 'none' || getComputedStyle(modal).display === 'none') {
+                window.showModal('leaderboardModal');
+                window.fetchCloudLeaderboard();
+            } else {
+                window.hideModal('leaderboardModal');
+            }
+        };
+
+        window.toggleTVBoardMode = function() {
+            const tvOverlay = document.getElementById('tvBoardOverlay');
+            if (!tvOverlay) return;
+
+            window.isTVModeActive = !window.isTVModeActive;
+            if (window.isTVModeActive) {
+                window.showModal('tvBoardOverlay');
+                
+                try {
+                    let currentUrl = (window.location && window.location.href) ? window.location.href : "https://github.com";
+                    const qrImg = document.getElementById('tvQrCodeImg');
+                    if (qrImg) {
+                        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(currentUrl)}`;
+                    }
+                } catch(e) {}
+
+                // Initial fetch & start 3-second realtime loop
+                window.fetchCloudLeaderboard();
+                if (!window.tvPollingInterval) {
+                    window.tvPollingInterval = setInterval(window.fetchCloudLeaderboard, 3000);
+                }
+            } else {
+                window.hideModal('tvBoardOverlay');
+                if (window.tvPollingInterval) {
+                    clearInterval(window.tvPollingInterval);
+                    window.tvPollingInterval = null;
+                }
+            }
+        };
+
+        window.toggleFullscreen = function() {
+            try {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                }
+            } catch(e) {}
+        };
+
+        window.fetchCloudLeaderboard = function() {
+            if (GAS_URL && GAS_URL.startsWith("https://script.google.com")) {
+                // Add timestamp (_t) cache-buster to bypass browser/proxy HTTP caching for true 3s updates
+                const cacheBusterUrl = `${GAS_URL}?action=getLeaderboard&_t=${Date.now()}`;
+                fetch(cacheBusterUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.scores) {
+                            window.globalLeaderboard = data.scores;
+                            window.classTotalScore = data.classTotalScore || 0;
+                            window.renderLeaderboardUI(data.scores);
+                            if (window.isTVModeActive) window.renderTVLeaderboardUI(data.scores, window.classTotalScore);
+                        }
+                    })
+                    .catch(() => window.loadLocalLeaderboardFallback());
+            } else {
+                window.loadLocalLeaderboardFallback();
+            }
+        };
+
+        window.loadLocalLeaderboardFallback = function() {
+            try {
+                const localData = JSON.parse(safeGetStorage('outlier_defense_scores_v3') || '[]');
+                window.globalLeaderboard = localData;
+                window.classTotalScore = localData.reduce((s, i) => s + (i.score || 0), 0);
+                window.renderLeaderboardUI(localData);
+                if (window.isTVModeActive) window.renderTVLeaderboardUI(localData, window.classTotalScore);
+            } catch(e) { window.globalLeaderboard = []; }
+        };
+
+        window.saveScoreToCloud = function(name, score, wave, badges) {
+            try {
+                const badgeStr = Array.isArray(badges) ? badges.join(',') : String(badges || '');
+                const safeName = String(name || '익명 수험생');
+                const safeScore = Number(score) || 0;
+                const safeWave = Number(wave) || 1;
+
+                const newEntry = {
+                    name: safeName,
+                    score: safeScore,
+                    wave: safeWave,
+                    badges: badgeStr,
+                    date: new Date().toLocaleDateString('ko-KR')
+                };
+
+                window.globalLeaderboard.push(newEntry);
+                window.globalLeaderboard.sort((a, b) => b.score - a.score);
+                window.globalLeaderboard = window.globalLeaderboard.slice(0, 20);
+                window.classTotalScore += newEntry.score;
+
+                safeSetStorage('outlier_defense_scores_v3', JSON.stringify(window.globalLeaderboard));
+
+                window.renderLeaderboardUI(window.globalLeaderboard);
+                if (window.isTVModeActive) window.renderTVLeaderboardUI(window.globalLeaderboard, window.classTotalScore);
+
+                if (GAS_URL && GAS_URL.startsWith("https://script.google.com")) {
+                    const params = new URLSearchParams();
+                    params.append('action', 'saveScore');
+                    params.append('name', safeName);
+                    params.append('score', safeScore);
+                    params.append('wave', safeWave);
+                    params.append('badges', badgeStr);
+
+                    fetch(GAS_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params
+                    }).catch(() => {});
+                }
+            } catch(e) {}
+        };
+
+        function initAudio() {
+            try {
+                if (!window.audioCtx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) window.audioCtx = new AudioContext();
+                }
+                if (window.audioCtx && window.audioCtx.state === 'suspended') {
+                    window.audioCtx.resume().catch(() => {});
+                }
+            } catch (e) {}
+        }
+
+        function playSFX(type) {
+            if (!window.isAudioOn) return;
+            initAudio();
+            if (!window.audioCtx) return;
+
+            try {
+                const now = window.audioCtx.currentTime;
+                const osc = window.audioCtx.createOscillator();
+                const gain = window.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(window.audioCtx.destination);
+
+                if (type === 'laser') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'shield') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'explosion') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'alert') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(880, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            } catch (e) {}
+        }
+
+        window.toggleAudio = function() {
+            window.isAudioOn = !window.isAudioOn;
+            const icon = document.getElementById('soundIcon');
+            const label = document.getElementById('soundLabel');
+            if (window.isAudioOn) {
+                if (icon) icon.className = "fa-solid fa-volume-high text-cyan-400";
+                if (label) label.innerText = "ON";
+            } else {
+                if (icon) icon.className = "fa-solid fa-volume-xmark text-slate-500";
+                if (label) label.innerText = "OFF";
+            }
+        };
+
+        function calculateStats(arr) {
+            if (!arr || arr.length === 0) {
+                return { count: 0, sum: 0, mean: '0.0', median: '0.0', mode: '없음', modeCount: 0 };
+            }
+
+            const count = arr.length;
+            const sum = arr.reduce((acc, curr) => acc + curr, 0);
+            const mean = (sum / count).toFixed(1);
+
+            const sorted = [...arr].sort((a, b) => a - b);
+            let median;
+            const mid = Math.floor(count / 2);
+            if (count % 2 === 0) {
+                median = ((sorted[mid - 1] + sorted[mid]) / 2).toFixed(1);
+            } else {
+                median = sorted[mid].toFixed(1);
+            }
+
+            const freqMap = {};
+            let maxFreq = 0;
+            arr.forEach(val => {
+                freqMap[val] = (freqMap[val] || 0) + 1;
+                if (freqMap[val] > maxFreq) maxFreq = freqMap[val];
+            });
+
+            let modes = [];
+            if (maxFreq > 1) {
+                for (let k in freqMap) {
+                    if (freqMap[k] === maxFreq) modes.push(k);
+                }
+            }
+
+            const modeStr = modes.length > 0 ? modes.join(', ') : '없음';
+
+            return { count, sum, mean, median, mode: modeStr, modeCount: maxFreq > 1 ? maxFreq : 0 };
+        }
+
+        class Block {
+            constructor(val, isOutlier, type) {
+                this.val = val;
+                this.isOutlier = isOutlier;
+                this.type = type;
+                this.width = isOutlier ? 64 : 52;
+                this.height = isOutlier ? 44 : 36;
+                const canvasWidth = window.canvas ? window.canvas.width : 800;
+                this.x = Math.random() * Math.max(100, canvasWidth - this.width - 20) + 10;
+                this.y = -this.height;
+                
+                let baseSpeed = 40 + window.wave * 8;
+                if (isOutlier) baseSpeed *= 1.2;
+                this.speed = baseSpeed + Math.random() * 20;
+                this.isTargeted = false;
+            }
+
+            update(dt) { this.y += this.speed * dt; }
+
+            draw() {
+                if (!window.ctx) return;
+                window.ctx.save();
+                
+                if (this.isOutlier) {
+                    window.ctx.fillStyle = this.type === 'outlier_plus' ? '#ef4444' : '#a855f7';
+                    window.ctx.strokeStyle = '#f87171';
+                    window.ctx.shadowColor = '#ef4444';
+                    window.ctx.shadowBlur = 12;
+                } else {
+                    window.ctx.fillStyle = '#0284c7';
+                    window.ctx.strokeStyle = '#38bdf8';
+                    window.ctx.shadowColor = '#38bdf8';
+                    window.ctx.shadowBlur = 6;
+                }
+
+                window.ctx.lineWidth = 2;
+                window.ctx.beginPath();
+                if (typeof window.ctx.roundRect === 'function') {
+                    window.ctx.roundRect(this.x, this.y, this.width, this.height, 8);
+                } else {
+                    window.ctx.rect(this.x, this.y, this.width, this.height);
+                }
+                window.ctx.fill();
+                window.ctx.stroke();
+
+                window.ctx.fillStyle = '#ffffff';
+                window.ctx.font = `bold ${this.isOutlier ? '15px' : '13px'} Orbitron, sans-serif`;
+                window.ctx.textAlign = 'center';
+                window.ctx.textBaseline = 'middle';
+                const displayText = (this.val > 0 ? '+' : '') + this.val;
+                window.ctx.fillText(displayText, this.x + this.width / 2, this.y + this.height / 2);
+
+                if (this.isOutlier) {
+                    window.ctx.fillStyle = '#fef08a';
+                    window.ctx.font = 'bold 9px Noto Sans KR, sans-serif';
+                    window.ctx.fillText('💣이상치', this.x + this.width / 2, this.y - 7);
+                }
+
+                if (this.isTargeted) {
+                    window.ctx.strokeStyle = '#00f0ff';
+                    window.ctx.lineWidth = 2;
+                    window.ctx.beginPath();
+                    window.ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2 + 6, 0, Math.PI * 2);
+                    window.ctx.stroke();
+                }
+
+                window.ctx.restore();
+            }
+
+            containsPoint(px, py) {
+                return px >= this.x && px <= this.x + this.width &&
+                       py >= this.y && py <= this.y + this.height;
+            }
+        }
+
+        function triggerConceptPopup(text, borderClass) {
+            const layer = document.getElementById('conceptPopLayer');
+            if (!layer) return;
+
+            const pop = document.createElement('div');
+            pop.className = `pop-text bg-slate-900/90 text-xs font-bold px-3 py-1.5 rounded-xl border ${borderClass} shadow-xl backdrop-blur-md text-center max-w-xs`;
+            pop.innerText = text;
+            layer.appendChild(pop);
+
+            setTimeout(() => { if (pop.parentNode) pop.parentNode.removeChild(pop); }, 1200);
+        }
+
+        window.renderLeaderboardUI = function(data) {
+            const listElem = document.getElementById('leaderboardList');
+            if (!listElem) return;
+
+            if (!data || data.length === 0) {
+                listElem.innerHTML = `<div class="text-center text-slate-500 py-6 text-xs">등록된 기록이 없습니다. 첫 번째 도전자가 되어보세요!</div>`;
+                return;
+            }
+
+            let html = '';
+            data.slice(0, 15).forEach((item, index) => {
+                let badgeClass = 'bg-slate-800 text-slate-400';
+                let rankIcon = `#${index + 1}`;
+                if (index === 0) { badgeClass = 'bg-amber-500 text-slate-950 font-black'; rankIcon = '🥇 1위'; }
+                else if (index === 1) { badgeClass = 'bg-slate-300 text-slate-950 font-black'; rankIcon = '🥈 2위'; }
+                else if (index === 2) { badgeClass = 'bg-amber-700 text-white font-black'; rankIcon = '🥉 3위'; }
+
+                let badgeIconsHtml = '';
+                if (item.badges) {
+                    const badgeArray = String(item.badges).split(',');
+                    badgeArray.forEach(b => {
+                        if (b.trim() && b.trim() !== 'undefined') badgeIconsHtml += `<span class="px-1 py-0.5 bg-indigo-950 border border-indigo-700 text-[9px] rounded text-indigo-300">${b.trim().split(' ')[0]}</span>`;
+                    });
+                }
+
+                html += `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-0.5 rounded text-[10px] ${badgeClass}">${rankIcon}</span>
+                        <span class="font-bold text-slate-200">${item.name || '익명'}</span>
+                        <div class="flex gap-0.5">${badgeIconsHtml}</div>
+                    </div>
+                    <div class="flex items-center space-x-3 font-arcade">
+                        <span class="text-cyan-400 font-bold">${item.score || 0}점</span>
+                        <span class="text-[10px] text-slate-400">WAVE ${item.wave || 1}</span>
+                    </div>
+                </div>`;
+            });
+            listElem.innerHTML = html;
+        };
+
+        window.renderTVLeaderboardUI = function(data, classScore) {
+            const tvContainer = document.getElementById('tvLeaderboardContent');
+            if (!tvContainer) return;
+
+            const TARGET_SCORE = 50000;
+            const currentTotal = classScore || 0;
+            const pct = Math.min(100, Math.round((currentTotal / TARGET_SCORE) * 100));
+            const fillBar = document.getElementById('classCoOpFillBar');
+            const pctText = document.getElementById('classCoOpPctText');
+            if (fillBar) fillBar.style.width = pct + '%';
+            if (pctText) pctText.innerText = `${currentTotal.toLocaleString()} / 50,000점 (${pct}%)`;
+
+            if (!data || data.length === 0) {
+                tvContainer.innerHTML = `<div class="col-span-2 text-center text-slate-500 py-16 text-lg">아직 도전 기록이 없습니다. 게임을 시작하면 실시간으로 순위표가 갱신됩니다!</div>`;
+                return;
+            }
+
+            let html = '';
+            data.slice(0, 10).forEach((item, index) => {
+                let cardStyle = 'bg-slate-900 border-slate-800 text-slate-300';
+                let rankBadge = `<span class="text-slate-500 font-arcade text-lg font-black">#${index + 1}</span>`;
+
+                if (index === 0) {
+                    cardStyle = 'bg-gradient-to-r from-amber-950/90 via-slate-900 to-slate-900 border-amber-500/80 shadow-[0_0_20px_rgba(245,158,11,0.3)] scale-[1.02]';
+                    rankBadge = `<div class="w-10 h-10 bg-amber-500 text-slate-950 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">🥇</div>`;
+                } else if (index === 1) {
+                    cardStyle = 'bg-gradient-to-r from-slate-900 via-slate-900 to-slate-900 border-slate-400/80 shadow-md';
+                    rankBadge = `<div class="w-10 h-10 bg-slate-300 text-slate-950 rounded-xl flex items-center justify-center font-black text-xl shadow-lg">🥈</div>`;
+                } else if (index === 2) {
+                    cardStyle = 'bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-900 border-amber-700/80 shadow-md';
+                    rankBadge = `<div class="w-10 h-10 bg-amber-700 text-white rounded-xl flex items-center justify-center font-black text-xl shadow-lg">🥉</div>`;
+                }
+
+                let badgeBadgesHtml = '';
+                if (item.badges) {
+                    const bArray = String(item.badges).split(',');
+                    bArray.forEach(b => {
+                        if (b.trim() && b.trim() !== 'undefined') badgeBadgesHtml += `<span class="px-1.5 py-0.5 bg-indigo-950 border border-indigo-700 text-[10px] rounded text-indigo-300">${b.trim()}</span>`;
+                    });
+                }
+
+                html += `
+                <div class="p-3.5 rounded-2xl border ${cardStyle} flex items-center justify-between transition-all duration-300">
+                    <div class="flex items-center space-x-3">
+                        ${rankBadge}
+                        <div>
+                            <span class="text-base font-extrabold text-white block">${item.name || '익명'}</span>
+                            <div class="flex gap-1 mt-0.5">${badgeBadgesHtml}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-black font-arcade text-amber-400 block">${item.score || 0}<span class="text-xs font-normal text-slate-400 ml-1">점</span></span>
+                        <span class="px-2 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-700/50 text-[10px] font-arcade font-bold rounded-md">WAVE ${item.wave || 1}</span>
+                    </div>
+                </div>`;
+            });
+
+            tvContainer.innerHTML = html;
+        };
+
+        window.startGame = function() {
+            try {
+                const inputElem = document.getElementById('playerNameInput');
+                if (inputElem && inputElem.value.trim() !== '') {
+                    window.playerName = inputElem.value.trim();
+                } else if (!window.playerName) {
+                    window.playerName = '익명 수험생';
+                }
+
+                window.score = 0;
+                window.cityHp = 100;
+                window.wave = 1;
+                window.waveTimer = 0;
+                window.lastTime = 0;
+                window.cityDataset = [50, 48, 52, 50, 50];
+                window.fallingBlocks = [];
+                window.particles = [];
+                window.lasers = [];
+                window.isMedianShieldActive = false;
+                window.shieldDurationTimer = 0;
+                window.cooldowns = { laser: 0, shield: 0, mode: 0 };
+
+                window.statsTracker = { shieldCount: 0, modePurgeCount: 0, laserInterceptions: 0 };
+                window.isQuizAnswered = false;
+
+                window.hideModal('startOverlay');
+                window.hideModal('gameOverOverlay');
+                window.hideModal('shieldVisualOverlay');
+
+                window.gameState = 'PLAYING';
+                playSFX('shield');
+                triggerConceptPopup(`🎮 ${window.playerName}님 화이팅! 도시 에너지를 50으로 지켜내세요!`, "text-emerald-300 border-emerald-500");
+            } catch(e) {}
+        };
+
+        function gameOver(reason) {
+            window.gameState = 'GAMEOVER';
+            const reasonElem = document.getElementById('gameOverReasonText');
+            if (reasonElem) reasonElem.innerText = reason;
+            const nameElem = document.getElementById('finalPlayerNameText');
+            if (nameElem) nameElem.innerText = window.playerName;
+            const scoreElem = document.getElementById('finalScoreText');
+            if (scoreElem) scoreElem.innerText = window.score;
+
+            const earnedBadges = [];
+            if (window.statsTracker.shieldCount >= 3) earnedBadges.push("🛡️ 중앙값의 수호자");
+            if (window.statsTracker.modePurgeCount >= 1) earnedBadges.push("🧹 통계 대청소부");
+            if (window.statsTracker.laserInterceptions >= 5) earnedBadges.push("🎯 요격의 달인");
+
+            const badgeBox = document.getElementById('earnedBadgesList');
+            if (badgeBox) {
+                if (earnedBadges.length > 0) {
+                    badgeBox.innerHTML = earnedBadges.map(b => `<span class="px-2 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg font-bold">${b}</span>`).join('');
+                } else {
+                    badgeBox.innerHTML = `<span class="text-slate-500">획득한 뱃지가 없습니다. 더 많은 스킬을 활용해보세요!</span>`;
+                }
+            }
+
+            window.currentQuiz = quizPool[Math.floor(Math.random() * quizPool.length)];
+            renderQuizUI(window.currentQuiz);
+
+            window.showModal('gameOverOverlay');
+            playSFX('explosion');
+
+            if (window.saveScoreToCloud) {
+                window.saveScoreToCloud(window.playerName, window.score, window.wave, earnedBadges);
+            }
+        }
+
+        function renderQuizUI(quiz) {
+            const badgeStatus = document.getElementById('quizBadgeStatus');
+            if (badgeStatus) {
+                badgeStatus.innerText = "미풀이";
+                badgeStatus.className = "text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold";
+            }
+            const qText = document.getElementById('quizQuestionText');
+            if (qText) qText.innerText = quiz.q;
+            
+            window.hideModal('quizExplanationBox');
+
+            const optionsList = document.getElementById('quizOptionsList');
+            if (optionsList) {
+                optionsList.innerHTML = quiz.options.map((opt, idx) => `
+                    <button onclick="window.submitQuizAnswer(${idx})" class="w-full text-left p-1.5 bg-slate-900 hover:bg-indigo-900/80 border border-indigo-800/60 rounded-lg text-slate-200 font-semibold transition cursor-pointer">
+                        ${opt}
+                    </button>
+                `).join('');
+            }
+        }
+
+        window.submitQuizAnswer = function(selectedIdx) {
+            if (window.isQuizAnswered || !window.currentQuiz) return;
+            window.isQuizAnswered = true;
+
+            const badgeStatus = document.getElementById('quizBadgeStatus');
+            const expBox = document.getElementById('quizExplanationBox');
+            if (expBox) expBox.style.display = 'block';
+
+            if (selectedIdx === window.currentQuiz.ans) {
+                if (badgeStatus) {
+                    badgeStatus.innerText = "🎉 정답! (+500점)";
+                    badgeStatus.className = "text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold";
+                }
+                if (expBox) expBox.innerHTML = `<span class="text-emerald-400 font-bold block">👏 정답입니다! 보너스 500점이 추가되었습니다.</span>${window.currentQuiz.exp}`;
+                
+                playSFX('shield');
+                window.score += 500;
+                const scoreElem = document.getElementById('finalScoreText');
+                if (scoreElem) scoreElem.innerText = window.score;
+
+                const earnedBadges = [];
+                if (window.statsTracker.shieldCount >= 3) earnedBadges.push("🛡️ 중앙값의 수호자");
+                if (window.statsTracker.modePurgeCount >= 1) earnedBadges.push("🧹 통계 대청소부");
+                if (window.statsTracker.laserInterceptions >= 5) earnedBadges.push("🎯 요격의 달인");
+
+                if (window.saveScoreToCloud) {
+                    window.saveScoreToCloud(window.playerName, window.score, window.wave, earnedBadges);
+                }
+            } else {
+                if (badgeStatus) {
+                    badgeStatus.innerText = "❌ 오답";
+                    badgeStatus.className = "text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-1.5 py-0.5 rounded font-bold";
+                }
+                if (expBox) expBox.innerHTML = `<span class="text-rose-400 font-bold block">아쉽네요! 해설을 확인해보세요.</span>${window.currentQuiz.exp}`;
+                playSFX('alert');
+            }
+        };
+
+        window.useLaserSkill = function(specificTargetIdx = -1) {
+            if (window.cooldowns.laser > 0 || window.gameState !== 'PLAYING') return;
+
+            let targetIdx = specificTargetIdx;
+
+            if (targetIdx === -1 || targetIdx >= window.fallingBlocks.length) {
+                let highestY = -999;
+                window.fallingBlocks.forEach((b, idx) => {
+                    if (b.isOutlier && b.y > highestY) {
+                        highestY = b.y;
+                        targetIdx = idx;
+                    }
+                });
+
+                if (targetIdx === -1 && window.fallingBlocks.length > 0) {
+                    let maxLowY = -999;
+                    window.fallingBlocks.forEach((b, idx) => {
+                        if (b.y > maxLowY) {
+                            maxLowY = b.y;
+                            targetIdx = idx;
+                        }
+                    });
+                }
+            }
+
+            if (targetIdx !== -1 && window.fallingBlocks[targetIdx]) {
+                const target = window.fallingBlocks[targetIdx];
+                const canvasW = window.canvas ? window.canvas.width : 800;
+                const canvasH = window.canvas ? window.canvas.height : 520;
+                window.lasers.push({
+                    x1: canvasW / 2,
+                    y1: canvasH - 10,
+                    x2: target.x,
+                    y2: target.y,
+                    life: 1.0
+                });
+
+                createParticles(target.x, target.y, '#00f0ff', 22);
+                
+                if (target.isOutlier) {
+                    window.statsTracker.laserInterceptions++;
+                    triggerConceptPopup("🎯 이상치 요격 성공! (위험 원인 사전에 파괴)", "text-cyan-300 border-cyan-500");
+                }
+
+                window.fallingBlocks.splice(targetIdx, 1);
+
+                playSFX('laser');
+                window.score += 150;
+                window.cooldowns.laser = window.COOLDOWN_MAX.laser;
+            }
+        };
+
+        window.useMedianShieldSkill = function() {
+            if (window.cooldowns.shield > 0 || window.gameState !== 'PLAYING') return;
+
+            window.isMedianShieldActive = true;
+            window.shieldDurationTimer = 8.0;
+            window.cooldowns.shield = window.COOLDOWN_MAX.shield;
+
+            const hasOutlier = window.cityDataset.some(v => Math.abs(v - 50) > 150);
+            if (hasOutlier) window.statsTracker.shieldCount++;
+
+            window.showModal('shieldVisualOverlay');
+            
+            const modeText = document.getElementById('gaugeModeText');
+            if (modeText) modeText.innerText = "🛡️ 측정 기준: 중앙값 (Median)";
+            const shieldBadge = document.getElementById('shieldModeBadge');
+            if (shieldBadge) shieldBadge.className = "px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold rounded-lg flex items-center gap-1.5 glow-box-shield";
+
+            const stats = calculateStats(window.cityDataset);
+            triggerConceptPopup(`🛡️ 중앙값(${stats.median}) 채택! 이상치 영향 무력화 완료!`, "text-emerald-300 border-emerald-500");
+
+            playSFX('shield');
+            window.score += 200;
+        };
+
+        window.useModePurgeSkill = function() {
+            if (window.cooldowns.mode > 0 || window.gameState !== 'PLAYING') return;
+
+            const stats = calculateStats(window.cityDataset);
+            if (stats.modeCount > 1) {
+                const modeVal = Number(stats.mode.split(',')[0]);
+                const beforeCount = window.cityDataset.length;
+                window.cityDataset = window.cityDataset.filter(v => v !== modeVal);
+                const removedNum = beforeCount - window.cityDataset.length;
+
+                window.statsTracker.modePurgeCount++;
+
+                triggerConceptPopup(`🧹 최빈값 [${modeVal}] ${removedNum}개 동시 정화! (평균 복구)`, "text-amber-300 border-amber-500");
+
+                playSFX('laser');
+                window.score += 300;
+                window.cooldowns.mode = window.COOLDOWN_MAX.mode;
+            }
+        };
+
+        function spawnFallingBlock() {
+            const isOutlier = Math.random() < Math.min(0.4, 0.15 + window.wave * 0.05);
+
+            let val, type;
+            if (isOutlier) {
+                if (Math.random() > 0.4) {
+                    val = Math.floor(Math.random() * 400) + 300;
+                    type = 'outlier_plus';
+                } else {
+                    val = - (Math.floor(Math.random() * 300) + 200);
+                    type = 'outlier_minus';
+                }
+            } else {
+                val = Math.floor(Math.random() * 30) + 35;
+                type = 'normal';
+            }
+
+            window.fallingBlocks.push(new Block(val, isOutlier, type));
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                window.particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    alpha: 1.0,
+                    color
+                });
+            }
+        }
+
+        function gameLoop(timestamp) {
+            if (!window.lastTime) window.lastTime = timestamp;
+            const dt = Math.min((timestamp - window.lastTime) / 1000, 0.1);
+            window.lastTime = timestamp;
+
+            if (window.gameState === 'PLAYING') {
+                updateGame(dt);
+            }
+
+            renderGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateGame(dt) {
+            window.waveTimer += dt;
+            if (window.waveTimer > 20) {
+                window.wave++;
+                window.waveTimer = 0;
+                window.score += 500;
+                playSFX('shield');
+                triggerConceptPopup(`🚀 WAVE ${window.wave} 시작! 폭탄 속도가 빨라집니다.`, "text-cyan-300 border-cyan-500");
+            }
+
+            for (let k in window.cooldowns) {
+                if (window.cooldowns[k] > 0) {
+                    window.cooldowns[k] = Math.max(0, window.cooldowns[k] - dt);
+                }
+            }
+
+            if (window.isMedianShieldActive) {
+                window.shieldDurationTimer -= dt;
+                if (window.shieldDurationTimer <= 0) {
+                    window.isMedianShieldActive = false;
+                    window.hideModal('shieldVisualOverlay');
+                    const modeText = document.getElementById('gaugeModeText');
+                    if (modeText) modeText.innerText = "측정: 평균(Mean)";
+                    const shieldBadge = document.getElementById('shieldModeBadge');
+                    if (shieldBadge) shieldBadge.className = "px-2 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold rounded-lg flex items-center gap-1";
+                }
+            }
+
+            const spawnInterval = Math.max(0.8, 2.2 - (window.wave * 0.15));
+            if (Math.random() < dt / spawnInterval) {
+                spawnFallingBlock();
+            }
+
+            let defaultAutoTargetIdx = -1;
+            let highestY = -999;
+            window.fallingBlocks.forEach((b, idx) => {
+                b.isTargeted = b.containsPoint(window.mousePos.x, window.mousePos.y);
+                if (b.isOutlier && b.y > highestY) {
+                    highestY = b.y;
+                    defaultAutoTargetIdx = idx;
+                }
+            });
+
+            if (defaultAutoTargetIdx !== -1 && !window.fallingBlocks.some(b => b.isTargeted)) {
+                window.fallingBlocks[defaultAutoTargetIdx].isTargeted = true;
+            }
+
+            const canvasH = window.canvas ? window.canvas.height : 520;
+            const cityGroundY = canvasH - 35;
+
+            for (let i = window.fallingBlocks.length - 1; i >= 0; i--) {
+                const b = window.fallingBlocks[i];
+                b.update(dt);
+
+                if (b.y >= cityGroundY) {
+                    window.cityDataset.push(b.val);
+                    if (window.cityDataset.length > 25) {
+                        window.cityDataset.shift();
+                    }
+
+                    createParticles(b.x, cityGroundY, b.isOutlier ? '#ef4444' : '#00f0ff', 12);
+                    
+                    if (b.isOutlier) playSFX('alert');
+                    else playSFX('explosion');
+
+                    window.fallingBlocks.splice(i, 1);
+                }
+            }
+
+            for (let i = window.particles.length - 1; i >= 0; i--) {
+                const p = window.particles[i];
+                p.x += p.vx * 60 * dt;
+                p.y += p.vy * 60 * dt;
+                p.alpha -= 2 * dt;
+                if (p.alpha <= 0) window.particles.splice(i, 1);
+            }
+
+            for (let i = window.lasers.length - 1; i >= 0; i--) {
+                window.lasers[i].life -= 4 * dt;
+                if (window.lasers[i].life <= 0) window.lasers.splice(i, 1);
+            }
+
+            const stats = calculateStats(window.cityDataset);
+            const activeVal = window.isMedianShieldActive ? stats.median : stats.mean;
+
+            const deviation = Math.abs(activeVal - 50);
+            if (deviation > 15) {
+                window.cityHp -= (deviation - 15) * 0.8 * dt;
+                if (Math.random() < 0.1) playSFX('alert');
+            } else {
+                window.cityHp = Math.min(100, window.cityHp + 1.5 * dt);
+                window.score += Math.round(10 * dt);
+            }
+
+            if (window.cityHp <= 0) {
+                gameOver("💥 에너지가 통제 불능 상태가 되어 도시가 파괴되었습니다!");
+            }
+
+            updateUI(stats, activeVal);
+        }
+
+        function renderGame() {
+            if (!window.ctx || !window.canvas) return;
+            window.ctx.clearRect(0, 0, window.canvas.width, window.canvas.height);
+
+            const groundY = window.canvas.height - 35;
+            window.ctx.fillStyle = '#1e293b';
+            window.ctx.fillRect(0, groundY, window.canvas.width, 35);
+
+            window.ctx.strokeStyle = window.isMedianShieldActive ? '#10b981' : '#0284c7';
+            window.ctx.lineWidth = 2;
+            window.ctx.beginPath();
+            window.ctx.moveTo(0, groundY);
+            window.ctx.lineTo(window.canvas.width, groundY);
+            window.ctx.stroke();
+
+            window.fallingBlocks.forEach(b => b.draw());
+
+            window.lasers.forEach(l => {
+                window.ctx.strokeStyle = `rgba(0, 240, 255, ${l.life})`;
+                window.ctx.lineWidth = 4;
+                window.ctx.beginPath();
+                window.ctx.moveTo(l.x1, l.y1);
+                window.ctx.lineTo(l.x2, l.y2);
+                window.ctx.stroke();
+            });
+
+            window.particles.forEach(p => {
+                window.ctx.fillStyle = p.color;
+                window.ctx.globalAlpha = p.alpha;
+                window.ctx.beginPath();
+                window.ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                window.ctx.fill();
+                window.ctx.globalAlpha = 1.0;
+            });
+        }
+
+        function updateUI(stats, activeVal) {
+            const scoreText = document.getElementById('scoreText');
+            if (scoreText) scoreText.innerText = window.score;
+            const hpText = document.getElementById('hpText');
+            if (hpText) hpText.innerText = Math.max(0, Math.round(window.cityHp));
+            const waveNum = document.getElementById('waveNum');
+            if (waveNum) waveNum.innerText = window.wave;
+
+            const gaugePct = Math.max(0, Math.min(100, (activeVal / 100) * 100));
+            const fillElem = document.getElementById('energyGaugeFill');
+            if (fillElem) fillElem.style.width = gaugePct + '%';
+
+            const hasExtremeOutlier = window.cityDataset.some(v => Math.abs(v - 50) > 150);
+            const alertBanner = document.getElementById('actionAlertBanner');
+            const dynamicTipElem = document.getElementById('teacherDynamicTip');
+
+            if (hasExtremeOutlier && !window.isMedianShieldActive) {
+                if (alertBanner) window.showModal('actionAlertBanner');
+                const alertText = document.getElementById('actionAlertText');
+                if (alertText) alertText.innerHTML = `🚨 이상치 폭탄 감지! 평균(${stats.mean}) 급등! <strong class="underline font-black">[2] 중앙값 방어막</strong>으로 정가운데값(${stats.median})을 채택하세요!`;
+                
+                if (dynamicTipElem) {
+                    dynamicTipElem.innerHTML = `⚠️ <strong>선생님의 팁:</strong> 이상치 때문에 <strong>평균은 ${stats.mean}으로 폭발</strong>했지만, 정가운데 수치인 <strong>중앙값은 여전히 ${stats.median}</strong>입니다! 바로 [2]번을 누르세요!`;
+                }
+            } else if (stats.modeCount >= 3) {
+                if (alertBanner) window.showModal('actionAlertBanner');
+                const alertText = document.getElementById('actionAlertText');
+                if (alertText) alertText.innerHTML = `🧹 동일한 숫자 [${stats.mode}]가 ${stats.modeCount}회 중복! <strong class="underline font-black">[3] 최빈값 정화</strong>로 일괄 소멸시키세요!`;
+
+                if (dynamicTipElem) {
+                    dynamicTipElem.innerHTML = `💡 <strong>선생님의 팁:</strong> 숫자 ${stats.mode}가 ${stats.modeCount}번 쌓여 <strong>최빈값</strong>이 되었습니다. [3]번 스킬을 쓰면 해당 숫자 전체가 동시에 삭제됩니다!`;
+                }
+            } else {
+                if (alertBanner) window.hideModal('actionAlertBanner');
+                if (dynamicTipElem) {
+                    if (window.isMedianShieldActive) {
+                        dynamicTipElem.innerHTML = `🛡️ <strong>방어막 작동 중:</strong> 극단적인 값이 존재해도 크기순 정렬의 <strong>가운데 값(중앙값)만 수집</strong>하므로 도시 에너지가 통제 가능합니다.`;
+                    } else {
+                        dynamicTipElem.innerHTML = `💡 <strong>선생님의 팁:</strong> 이상치 폭탄이 바닥에 떨어지면 <strong>평균과 중앙값의 수치 격차</strong>가 얼마나 크게 벌어지는지 눈여겨보세요!`;
+                    }
+                }
+            }
+
+            const gaugeValElem = document.getElementById('currentGaugeVal');
+            if (fillElem && gaugeValElem) {
+                if (window.isMedianShieldActive) {
+                    fillElem.className = "h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 transition-all duration-300 shadow-[0_0_12px_#10b981]";
+                    gaugeValElem.innerHTML = `🛡️ 방어 가동 중! <span class="text-emerald-300 font-bold">[중앙값: ${stats.median}]</span> <span class="text-xs text-rose-400 opacity-80">(원래 평균: ${stats.mean})</span>`;
+                } else if (Math.abs(activeVal - 50) > 25) {
+                    fillElem.className = "h-full rounded-full bg-gradient-to-r from-rose-600 via-red-500 to-rose-600 transition-all duration-300 shadow-[0_0_12px_#f43f5e]";
+                    gaugeValElem.innerText = `현재 측정 수치(평균): ${activeVal} (위험!)`;
+                } else {
+                    fillElem.className = "h-full rounded-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500 transition-all duration-300";
+                    gaugeValElem.innerText = `현재 측정 수치: ${activeVal}`;
+                }
+            }
+
+            const meanDisp = document.getElementById('valMeanDisplay');
+            if (meanDisp) meanDisp.innerText = stats.mean;
+            const meanForm = document.getElementById('meanFormulaText');
+            if (meanForm) meanForm.innerText = `합: ${stats.sum} / 개수: ${stats.count}`;
+
+            const medDisp = document.getElementById('valMedianDisplay');
+            if (medDisp) medDisp.innerText = stats.median;
+            const medPos = document.getElementById('medianPosText');
+            if (medPos) medPos.innerText = `총 ${stats.count}개 중 정가운데`;
+
+            const modeDisp = document.getElementById('valModeDisplay');
+            if (modeDisp) modeDisp.innerText = stats.mode;
+            const modeCntText = document.getElementById('modeCountText');
+            if (modeCntText) modeCntText.innerText = `최다 출현: ${stats.modeCount}회`;
+
+            const dataCountText = document.getElementById('dataCountText');
+            if (dataCountText) dataCountText.innerText = stats.count;
+
+            const trayDataCount = document.getElementById('trayDataCount');
+            if (trayDataCount) trayDataCount.innerText = stats.count;
+            const trayMedianVal = document.getElementById('trayMedianVal');
+            if (trayMedianVal) trayMedianVal.innerText = stats.median;
+            const trayModeVal = document.getElementById('trayModeVal');
+            if (trayModeVal) trayModeVal.innerText = stats.mode;
+            const trayModeCount = document.getElementById('trayModeCount');
+            if (trayModeCount) trayModeCount.innerText = stats.modeCount > 0 ? `${stats.modeCount}회` : '0회';
+
+            const trayModeBox = document.getElementById('trayModeCardBox');
+            if (trayModeBox) {
+                if (stats.modeCount >= 3) {
+                    trayModeBox.className = "bg-amber-950/60 p-2 rounded-xl border border-amber-400 flex flex-col justify-between transition animate-pulse glow-box-cyan";
+                } else {
+                    trayModeBox.className = "bg-slate-950 p-2 rounded-xl border border-amber-500/40 flex flex-col justify-between transition";
+                }
+            }
+
+            const laserPct = window.cooldowns.laser > 0 ? ((window.COOLDOWN_MAX.laser - window.cooldowns.laser) / window.COOLDOWN_MAX.laser) * 100 : 100;
+            const laserGauge = document.getElementById('laserGaugeBar');
+            if (laserGauge) laserGauge.style.width = laserPct + '%';
+            const laserCoolText = document.getElementById('laserCooldownText');
+            if (laserCoolText) laserCoolText.innerText = window.cooldowns.laser > 0 ? `${window.cooldowns.laser.toFixed(1)}s 충전 중` : 'READY [1]';
+            const btnLaser = document.getElementById('btnSkillLaser');
+            if (btnLaser) btnLaser.disabled = window.cooldowns.laser > 0;
+
+            const shieldPct = window.isMedianShieldActive ? 100 : (window.cooldowns.shield > 0 ? ((window.COOLDOWN_MAX.shield - window.cooldowns.shield) / window.COOLDOWN_MAX.shield) * 100 : 100);
+            const shieldGauge = document.getElementById('shieldGaugeBar');
+            if (shieldGauge) shieldGauge.style.width = shieldPct + '%';
+            const shieldCoolText = document.getElementById('shieldCooldownText');
+            if (shieldCoolText) {
+                if (window.isMedianShieldActive) {
+                    shieldCoolText.innerText = `🛡️ 방어중 (${window.shieldDurationTimer.toFixed(1)}s)`;
+                } else if (window.cooldowns.shield > 0) {
+                    shieldCoolText.innerText = `${window.cooldowns.shield.toFixed(1)}s 충전 중`;
+                } else {
+                    shieldCoolText.innerText = 'READY [2]';
+                }
+            }
+            const btnShield = document.getElementById('btnSkillShield');
+            if (btnShield) btnShield.disabled = window.cooldowns.shield > 0 || window.isMedianShieldActive;
+
+            const modePct = window.cooldowns.mode > 0 ? ((window.COOLDOWN_MAX.mode - window.cooldowns.mode) / window.COOLDOWN_MAX.mode) * 100 : 100;
+            const modeGauge = document.getElementById('modeGaugeBar');
+            if (modeGauge) modeGauge.style.width = modePct + '%';
+            const modeCoolText = document.getElementById('modeCooldownText');
+            if (modeCoolText) {
+                if (window.cooldowns.mode > 0) {
+                    modeCoolText.innerText = `${window.cooldowns.mode.toFixed(1)}s 충전 중`;
+                } else {
+                    modeCoolText.innerText = 'READY [3]';
+                }
+            }
+            const btnMode = document.getElementById('btnSkillMode');
+            if (btnMode) btnMode.disabled = window.cooldowns.mode > 0 || stats.modeCount <= 1;
+        }
+
+        function resizeCanvas() {
+            if (!window.canvas) return;
+            const rect = window.canvas.getBoundingClientRect();
+            window.canvas.width = rect.width || 800;
+            window.canvas.height = rect.height || 520;
+        }
+
+        function initApp() {
+            window.canvas = document.getElementById('gameCanvas');
+            if (window.canvas) {
+                window.ctx = window.canvas.getContext('2d');
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            if (window.canvas) {
+                const handlePointer = (e) => {
+                    if (window.gameState !== 'PLAYING') return;
+
+                    const rect = window.canvas.getBoundingClientRect();
+                    const clickX = (e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0)) - rect.left;
+                    const clickY = (e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0)) - rect.top;
+
+                    let clickedIdx = -1;
+                    for (let i = window.fallingBlocks.length - 1; i >= 0; i--) {
+                        if (window.fallingBlocks[i].containsPoint(clickX, clickY)) {
+                            clickedIdx = i;
+                            break;
+                        }
+                    }
+
+                    window.useLaserSkill(clickedIdx);
+                };
+
+                window.canvas.addEventListener('pointerdown', handlePointer);
+                window.canvas.addEventListener('touchstart', handlePointer, { passive: true });
+
+                window.canvas.addEventListener('pointermove', (e) => {
+                    const rect = window.canvas.getBoundingClientRect();
+                    window.mousePos.x = e.clientX - rect.left;
+                    window.mousePos.y = e.clientY - rect.top;
+                });
+            }
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === '1') window.useLaserSkill();
+                if (e.key === '2') window.useMedianShieldSkill();
+                if (e.key === '3') window.useModePurgeSkill();
+            });
+
+            window.fetchCloudLeaderboard();
+            requestAnimationFrame(gameLoop);
+        }
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            setTimeout(initApp, 10);
+        } else {
+            document.addEventListener('DOMContentLoaded', initApp);
+            window.addEventListener('load', initApp);
+        }
+    </script>
+</body>
+</html>
